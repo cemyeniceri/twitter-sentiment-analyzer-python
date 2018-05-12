@@ -1,199 +1,200 @@
 import nltk.classify
-import re, pickle, csv, os
+import pickle, csv, os
 import classifier_helper
 
-
-from collections import defaultdict
-
-#start class
+# start class
 class MaxEntClassifier:
     """ Maximum Entropy Classifier """
-    #variables    
-    #start __init__
-    def __init__(self, data, training_data_file, classifierDumpFile, trainingRequired = 0):
-        #Instantiate classifier helper        
-        self.helper = classifier_helper.ClassifierHelper('data-set/feature_list.txt')
-        
-        self.lenTweets = len(data)
-        self.origTweets = self.getUniqData(data)
-        self.tweets = self.getProcessedTweets(self.origTweets)
-        
-        self.results = {}
-        self.neut_count = [0] * self.lenTweets
-        self.pos_count = [0] * self.lenTweets
-        self.neg_count = [0] * self.lenTweets
 
-        self.trainingDataFile = training_data_file
-        
-        #call training model
-        if(trainingRequired):
-            self.classifier = self.getMaxEntTrainedClassifer(training_data_file, classifierDumpFile)
-        else:
-            f1 = open(classifierDumpFile)            
-            if(f1):
-                self.classifier = pickle.load(f1)                
-                f1.close()                
-            else:
-                self.classifier = self.getMaxEntTrainedClassifer(training_data_file, classifierDumpFile)
-    #end
-            #start getUniqData
-    def getUniqData(self, data):
-        uniq_data = {}        
-        for i in data:
-            d = data[i]
-            u = []
-            for element in d:
-                if element not in u:
-                    u.append(element)
-            #end inner loop
-            uniq_data[i] = u            
-        #end outer loop
-        return uniq_data
-    #end
-    
-    #start getProcessedTweets
-    def getProcessedTweets(self, data):        
-        tweets = {}        
-        for i in data:
-            d = data[i]
-            tw = []
-            for t in d:
-                tw.append(self.helper.process_tweet(t))
-            tweets[i] = tw            
-        #end loop
-        return tweets
-    #end
-    
-    #start getMaxEntTrainedClassifier
-    def getMaxEntTrainedClassifer(self, trainingDataFile, classifierDumpFile):        
-        # read all tweets and labels
-        # maxItems = 0 indicates read all training data
-        maxItems = 0 
-        tweetItems = self.getFilteredTrainingData(trainingDataFile, maxItems)
-        
+    # variables
+    # start __init__
+    def __init__(self, training_data_file, classifier_dump_file):
+        # Instantiate classifier helper
+        self.helper = classifier_helper.ClassifierHelper()
+        self.training_data_file = training_data_file
+        self.classifier_dump_file = classifier_dump_file
+        self.test_tweet_items = []
+
+    # end
+
+    # start getUniqData
+    def getTweetsWithUniqueWords(self, tweets):
+        tweets_with_unique_words = []
+        for tweet in tweets:
+            word_set = []
+            words = tweet.split()
+            for word in words:
+                if word not in word_set and self.helper.is_ascii(word):
+                    word_set.append(word)
+            # end inner loop
+            tweet_str = " ".join(str(x) for x in word_set)
+            tweets_with_unique_words.append(tweet_str)
+            # end outer loop
+        return tweets_with_unique_words
+
+    # end
+
+    # start getProcessedTweets
+    def getFeatureVectorList(self, tweets):
+        feature_vector = []
+        for tweet in tweets:
+            feature_vector.append(self.helper.getFeatureVector(tweet))
+        return feature_vector
+
+    # end
+
+    # start getProcessedTweets
+    def getProcessedTweetList(self, tweets):
+        processed_tweets = []
+        for tweet in tweets:
+            processed_tweets.append(self.helper.process_tweet(tweet))
+            # end loop
+        return processed_tweets
+
+    # end
+
+    # start getMaxEntTrainedClassifier
+    def getMaxEntTrainedClassifer(self, training_data_file, classifier_dump_file):
+
+        tweet_items = self.getFilteredTrainingData(training_data_file)
+
         tweets = []
-        for (words, sentiment) in tweetItems:
-            words_filtered = [e.lower() for e in words.split() if(self.helper.is_ascii(e))]
-            tweets.append((words_filtered, sentiment))
-                    
+        feature_list = []
+        for (tweet, sentiment) in tweet_items:
+            processed_tweet = self.helper.process_tweet(tweet)
+            feature_vector = self.helper.getFeatureVector(processed_tweet)
+            feature_list.extend(feature_vector)
+            tweets.append((feature_vector, sentiment))
+        # end loop
+
+        # Remove feature_list duplicates
+        self.helper.featureList = list(set(feature_list))
         training_set = nltk.classify.apply_features(self.helper.extract_features, tweets)
         # Write back classifier        
         classifier = nltk.classify.maxent.MaxentClassifier.train(training_set, 'GIS', trace=3, \
-                                    encoding=None, labels=None, sparse=True, gaussian_prior_sigma=0, max_iter = 5) 
-        outfile = open(classifierDumpFile, 'wb')        
-        pickle.dump(classifier, outfile)        
-        outfile.close()        
+                                                                 encoding=None, labels=None,
+                                                                 gaussian_prior_sigma=0, max_iter=5)
+
+        outfile = open(classifier_dump_file, 'wb')
+        pickle.dump(classifier, outfile)
+        outfile.close()
         return classifier
-    #end
-    
-    #start getFilteredTrainingData
-    def getFilteredTrainingData(self, trainingDataFile, maxItems = 0):
-        #maxItems = 0 indicates read all training data
-        fp = open( trainingDataFile, 'rb' )
-        if(maxItems == 0):
-            min_count = self.getMinCount(trainingDataFile)        
-        else:
-            min_count = maxItems
-        min_count = 40000
+
+    # end
+
+    # start getFilteredTrainingData
+    def getFilteredTrainingData(self, training_data_file):
+        fp = open(training_data_file, 'rb')
+        min_count = self.getMinCount(training_data_file)
+        training_data_count = int(min_count * 0.75)
         neg_count, pos_count, neut_count = 0, 0, 0
-        
-        reader = csv.reader( fp, delimiter=',', quotechar='"', escapechar='\\' )
-        tweetItems = []
-        count = 1       
+
+        reader = csv.reader(fp, delimiter=',', quotechar='"', escapechar='\\')
+        tweet_items = []
         for row in reader:
             processed_tweet = self.helper.process_tweet(row[1])
             sentiment = row[0]
-            
-            if(sentiment == 'neutral'):                
-                if(neut_count == int(min_count)):
-                    continue
+
+            if sentiment == 'neutral':
+                if neut_count < training_data_count:
+                    tweet_item = processed_tweet, sentiment
+                    tweet_items.append(tweet_item)
+                elif neut_count < min_count:
+                    tweet_item = processed_tweet, sentiment
+                    self.test_tweet_items.append(tweet_item)
                 neut_count += 1
-            elif(sentiment == 'positive'):
-                if(pos_count == min_count):
-                    continue
+            elif sentiment == 'positive':
+                if pos_count < training_data_count:
+                    tweet_item = processed_tweet, sentiment
+                    tweet_items.append(tweet_item)
+                elif pos_count < min_count:
+                    tweet_item = processed_tweet, sentiment
+                    self.test_tweet_items.append(tweet_item)
                 pos_count += 1
-            elif(sentiment == 'negative'):
-                if(neg_count == min_count):
-                    continue
+            elif sentiment == 'negative':
+                if neg_count < training_data_count:
+                    tweet_item = processed_tweet, sentiment
+                    tweet_items.append(tweet_item)
+                elif neg_count < min_count:
+                    tweet_item = processed_tweet, sentiment
+                    self.test_tweet_items.append(tweet_item)
                 neg_count += 1
-            
-            tweet_item = processed_tweet, sentiment
-            tweetItems.append(tweet_item)
-            count +=1
-        #end loop
-        return tweetItems
-    #end 
-    
-    #start getMinCount
-    def getMinCount(self, trainingDataFile):
-        fp = open( trainingDataFile, 'rb' )
-        reader = csv.reader( fp, delimiter=',', quotechar='"', escapechar='\\' )
+        # end loop
+        return tweet_items
+
+    # end
+
+    # start getMinCount
+    def getMinCount(self, training_data_file):
+        fp = open(training_data_file, 'rb')
+        reader = csv.reader(fp, delimiter=',', quotechar='"', escapechar='\\')
         neg_count, pos_count, neut_count = 0, 0, 0
         for row in reader:
             sentiment = row[0]
-            if(sentiment == 'neutral'):
+            if sentiment == 'neutral':
                 neut_count += 1
-            elif(sentiment == 'positive'):
+            elif sentiment == 'positive':
                 pos_count += 1
-            elif(sentiment == 'negative'):
+            elif sentiment == 'negative':
                 neg_count += 1
-        #end loop
+        # end loop
         return min(neg_count, pos_count, neut_count)
-    #end
-    
-        #start classify
-    def classify(self):        
-        for i in self.tweets:
-            tw = self.tweets[i]
-            count = 0
-            res = {}
-            for t in tw:
-                label = self.classifier.classify(self.helper.extract_features(t.split()))
-                if(label == 'positive'):
-                    self.pos_count[i] += 1
-                elif(label == 'negative'):                
-                    self.neg_count[i] += 1
-                elif(label == 'neutral'):                
-                    self.neut_count[i] += 1
-                result = {'text': t, 'tweet': self.origTweets[i][count], 'label': label}
-                res[count] = result
-                count += 1
-            #end inner loop
-            self.results[i] = res
-        #end outer loop
-    #end
 
-    #start accuracy
-    def accuracy(self):
-        maxItems = 0
-        tweets = self.getFilteredTrainingData(self.trainingDataFile)
-        total = 0
-        correct = 0
-        wrong = 0
-        self.accuracy = 0.0
-        for (t, l) in tweets:
-            label = self.classifier.classify(self.helper.extract_features(t.split()))
-            if(label == l):
-                correct+= 1
+    # end
+
+    # start classify
+    def classify(self, tweets_fetched, training_required):
+
+        # call training model
+        if training_required:
+            classifier = self.getMaxEntTrainedClassifer(self.training_data_file, self.classifier_dump_file)
+        else:
+            if os.path.isfile(self.classifier_dump_file):
+                classifier_file = open(self.classifier_dump_file)
+                classifier = pickle.load(classifier_file)
+                classifier_file.close()
             else:
-                wrong+= 1
+                classifier = self.getMaxEntTrainedClassifer(self.training_data_file, self.classifier_dump_file)
+
+        orig_tweets = self.getTweetsWithUniqueWords(tweets_fetched)
+        processed_tweets = self.getProcessedTweetList(orig_tweets)
+        feature_vectors = self.getFeatureVectorList(processed_tweets)
+
+        count = 0
+        results = {}
+        for feature_vector in feature_vectors:
+            label = classifier.classify(self.helper.extract_features(feature_vector))
+            result = {'tweet': orig_tweets[count], 'label': label}
+            results[count] = result
+            count += 1
+        print(results)
+
+    # end
+
+    # start accuracy
+    def accuracy(self):
+        classifier_acc = self.getMaxEntTrainedClassifer(self.training_data_file, self.classifier_dump_file)
+        total = 0
+        wrong = 0
+
+        corrects = {'positive': 0, 'negative': 0, 'neutral': 0}
+
+        for (tweet, sentiment) in self.test_tweet_items:
+            processed_tweet = self.helper.process_tweet(tweet)
+            test_feature_vector = self.helper.getFeatureVector(processed_tweet)
+            label = classifier_acc.classify(self.helper.extract_features(test_feature_vector))
+            if label == sentiment:
+                corrects[sentiment] += 1
+            else:
+                wrong += 1
             total += 1
-        #end loop
-        self.accuracy = (float(correct)/total)*100
+        # end loop
+        correct = corrects['positive'] + corrects['negative'] + corrects['neutral']
+        print(corrects)
+
+        accuracy = (float(correct) / total) * 100
         print('Total = %d, Correct = %d, Wrong = %d, Accuracy = %.2f' % \
-                                                (total, correct, wrong, self.accuracy))
-    #end
+              (total, correct, wrong, accuracy))
+        # end
 
-    #start analyzeTweets
-    def analyzeTweets(self):
-        tweets = self.getFilteredTrainingData(self.trainingDataFile)
-        d = defaultdict(int)
-        for (t, l) in tweets:
-            for word in t.split():
-                d[word] += 1
-        #end loop
-        for w in sorted(d, key=d.get, reverse=True):
-            print(w, d[w])
-    #end
-
-#end class
+# end class

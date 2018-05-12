@@ -38,8 +38,6 @@ class NaiveBayesClassifier:
 
     # end
 
-    # end
-
     # start getProcessedTweets
     def getFeatureVectorList(self, tweets):
         feature_vector = []
