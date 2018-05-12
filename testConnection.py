@@ -1,7 +1,5 @@
-import get_twitter_data
+import twitterClient
 
 keyword = 'tamam'
-time = 'today'
-twitterData = get_twitter_data.TwitterData()
-tweets = twitterData.getTwitterData(keyword, time)
+tweets = twitterClient.getTwitterData(keyword)
 print(tweets)

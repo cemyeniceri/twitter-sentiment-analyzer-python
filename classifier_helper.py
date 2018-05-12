@@ -3,14 +3,43 @@ import re
 
 class ClassifierHelper:
     # start __init__
-    def __init__(self, featureListFile):
-        self.wordFeatures = []
-        # Read feature list
-        inpfile = open(featureListFile, 'r')
-        line = inpfile.readline()
+    def __init__(self):
+        self.stopWords = self.getStopWordList('data-set/stopwords.txt')
+        self.featureList = []
+    # end
+
+    # start getfeatureVector
+    def getFeatureVector(self, tweet):
+        feature_vector = []
+        words = tweet.split()
+        for word in words:
+            # replace two or more with two occurrences
+            word = self.replaceTwoOrMore(word)
+            # strip punctuation
+            word = word.strip('\'"?,.!')
+            # check if it consists of only words
+            val = re.search(r"^[a-zA-Z][a-zA-Z0-9]*[a-zA-Z]+[a-zA-Z0-9]*$", word)
+            # ignore if it is a stopWord
+            if word in self.stopWords or val is None:
+                continue
+            else:
+                feature_vector.append(word)
+        return feature_vector
+
+    # end
+
+    # start getStopWordList
+    def getStopWordList(self, stop_word_list_file_name):
+        # read the stopwords file and build a list
+        stop_words = ['AT_USER', 'URL']
+        fp = open(stop_word_list_file_name, 'r')
+        line = fp.readline()
         while line:
-            self.wordFeatures.append(line.strip())
-            line = inpfile.readline()
+            word = line.strip()
+            stop_words.append(word)
+            line = fp.readline()
+        fp.close()
+        return stop_words
 
     # end
 
@@ -18,7 +47,7 @@ class ClassifierHelper:
     def extract_features(self, document):
         document_words = set(document)
         features = {}
-        for word in self.wordFeatures:
+        for word in self.featureList:
             word = self.replaceTwoOrMore(word)
             word = word.strip('\'"?,.')
             features['contains(%s)' % word] = (word in document_words)
