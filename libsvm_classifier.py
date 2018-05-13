@@ -1,7 +1,7 @@
 from svmutil import *
-import csv
+import csv, os
 import classifier_helper
-
+import time
 
 # start class
 class SVMClassifier:
@@ -54,8 +54,7 @@ class SVMClassifier:
     # start getFilteredTrainingData
     def getFilteredTrainingData(self, training_data_file):
         fp = open(training_data_file, 'rb')
-        # min_count = self.helper.getMinCount(training_data_file)
-        min_count = 100
+        min_count = self.helper.getMinCount(training_data_file)
         training_data_count = int(min_count * 0.75)
         neg_count, pos_count, neut_count = 0, 0, 0
 
@@ -127,7 +126,8 @@ class SVMClassifier:
             result = {'tweet': t, 'label': label}
             results[count] = result
             count += 1
-        print(results)
+
+        self.helper.printResults(results)
         # end loop
 
     # end
@@ -138,7 +138,10 @@ class SVMClassifier:
         count = 0
         total, correct, wrong = 0, 0, 0
 
+        start = time.time()
         classifier_acc = self.getSVMTrainedClassifer(self.training_data_file, self.classifier_dump_file)
+        end = time.time()
+        print("Naive Bayes Classifier Training Time : " + str(round(end - start, 2)))
 
         test_tweets = []
         for (t, l) in self.test_tweet_items:

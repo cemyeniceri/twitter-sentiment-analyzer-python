@@ -49,20 +49,20 @@ def oauth_req(url):
 
 
 # start getTwitterData
-def getData(keyword, maxtweets=50):
+def getData(keyword, maxt_tweets=50):
     url = 'https://api.twitter.com/1.1/search/tweets.json?'
-    data = {'q': keyword, 'lang': 'en', 'result_type': 'recent', 'count': maxtweets, 'include_entities': 0}
+    data = {'q': keyword, 'lang': 'en', 'result_type': 'recent', 'count': maxt_tweets, 'include_entities': 0}
 
     url += urllib.urlencode(data)
 
     response = oauth_req(url)
-    jsonData = json.loads(response)
+    json_data = json.loads(response)
     tweets = []
-    if 'errors' in jsonData:
+    if 'errors' in json_data:
         print("API Error")
-        print(jsonData['errors'])
+        print(json_data['errors'])
     else:
-        for item in jsonData['statuses']:
+        for item in json_data['statuses']:
             tweets.append(item['text'])
     return tweets
     # end

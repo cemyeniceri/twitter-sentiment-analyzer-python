@@ -203,4 +203,21 @@ class ClassifierHelper:
 
     # end
 
+    #start printResult
+    def printResults(self, results):
+        positive_count = 0
+        negative_count = 0
+        neutral_count = 0
+        for key in results:
+            print(results[key])
+            if results[key]['label'] == 'positive':
+                positive_count += 1
+            elif results[key]['label'] == 'negative':
+                negative_count += 1
+            elif results[key]['label'] == 'neutral':
+                neutral_count += 1
+
+        print("Positive : " + str(positive_count) + " || Negative : " + str(negative_count) + " || Neutral : " + str(neutral_count))
+    #end
+
 # end class
