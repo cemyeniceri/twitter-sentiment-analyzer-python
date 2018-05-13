@@ -17,42 +17,6 @@ class MaxEntClassifier:
 
     # end
 
-    # start getUniqData
-    def getTweetsWithUniqueWords(self, tweets):
-        tweets_with_unique_words = []
-        for tweet in tweets:
-            word_set = []
-            words = tweet.split()
-            for word in words:
-                if word not in word_set and self.helper.is_ascii(word):
-                    word_set.append(word)
-            # end inner loop
-            tweet_str = " ".join(str(x) for x in word_set)
-            tweets_with_unique_words.append(tweet_str)
-            # end outer loop
-        return tweets_with_unique_words
-
-    # end
-
-    # start getProcessedTweets
-    def getFeatureVectorList(self, tweets):
-        feature_vector = []
-        for tweet in tweets:
-            feature_vector.append(self.helper.getFeatureVector(tweet))
-        return feature_vector
-
-    # end
-
-    # start getProcessedTweets
-    def getProcessedTweetList(self, tweets):
-        processed_tweets = []
-        for tweet in tweets:
-            processed_tweets.append(self.helper.process_tweet(tweet))
-            # end loop
-        return processed_tweets
-
-    # end
-
     # start getMaxEntTrainedClassifier
     def getMaxEntTrainedClassifer(self, training_data_file, classifier_dump_file):
 
@@ -85,7 +49,8 @@ class MaxEntClassifier:
     # start getFilteredTrainingData
     def getFilteredTrainingData(self, training_data_file):
         fp = open(training_data_file, 'rb')
-        min_count = self.getMinCount(training_data_file)
+        # min_count = self.helper.getMinCount(training_data_file)
+        min_count = 100
         training_data_count = int(min_count * 0.75)
         neg_count, pos_count, neut_count = 0, 0, 0
 
@@ -124,24 +89,6 @@ class MaxEntClassifier:
 
     # end
 
-    # start getMinCount
-    def getMinCount(self, training_data_file):
-        fp = open(training_data_file, 'rb')
-        reader = csv.reader(fp, delimiter=',', quotechar='"', escapechar='\\')
-        neg_count, pos_count, neut_count = 0, 0, 0
-        for row in reader:
-            sentiment = row[0]
-            if sentiment == 'neutral':
-                neut_count += 1
-            elif sentiment == 'positive':
-                pos_count += 1
-            elif sentiment == 'negative':
-                neg_count += 1
-        # end loop
-        return min(neg_count, pos_count, neut_count)
-
-    # end
-
     # start classify
     def classify(self, tweets_fetched, training_required):
 
@@ -156,9 +103,9 @@ class MaxEntClassifier:
             else:
                 classifier = self.getMaxEntTrainedClassifer(self.training_data_file, self.classifier_dump_file)
 
-        orig_tweets = self.getTweetsWithUniqueWords(tweets_fetched)
-        processed_tweets = self.getProcessedTweetList(orig_tweets)
-        feature_vectors = self.getFeatureVectorList(processed_tweets)
+        orig_tweets = self.helper.getTweetsWithUniqueWords(tweets_fetched)
+        processed_tweets = self.helper.getProcessedTweetList(orig_tweets)
+        feature_vectors = self.helper.getFeatureVectorList(processed_tweets)
 
         count = 0
         results = {}

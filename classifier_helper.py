@@ -1,3 +1,4 @@
+import csv
 import re
 
 
@@ -6,6 +7,33 @@ class ClassifierHelper:
     def __init__(self):
         self.stopWords = self.getStopWordList('data-set/stopwords.txt')
         self.featureList = []
+    # end
+
+    # start getUniqueData
+    def getTweetsWithUniqueWords(self, tweets):
+        tweets_with_unique_words = []
+        for tweet in tweets:
+            word_set = []
+            words = tweet.split()
+            for word in words:
+                if word not in word_set and self.is_ascii(word):
+                    word_set.append(word)
+            # end inner loop
+            tweet_str = " ".join(str(x) for x in word_set)
+            tweets_with_unique_words.append(tweet_str)
+            # end outer loop
+        return tweets_with_unique_words
+
+    # end
+
+    # start getProcessedTweets
+    def getProcessedTweetList(self, tweets):
+        processed_tweets = []
+        for tweet in tweets:
+            processed_tweets.append(self.process_tweet(tweet))
+            # end loop
+        return processed_tweets
+
     # end
 
     # start getfeatureVector
@@ -24,6 +52,15 @@ class ClassifierHelper:
                 continue
             else:
                 feature_vector.append(word)
+        return feature_vector
+
+    # end
+
+    # start getProcessedTweets
+    def getFeatureVectorList(self, tweets):
+        feature_vector = []
+        for tweet in tweets:
+            feature_vector.append(self.getFeatureVector(tweet))
         return feature_vector
 
     # end
@@ -146,6 +183,24 @@ class ClassifierHelper:
     # start is_ascii
     def is_ascii(self, word):
         return all(ord(c) < 128 for c in word)
+    # end
+
+    # start getMinCount
+    def getMinCount(self, training_data_file):
+        fp = open(training_data_file, 'rb')
+        reader = csv.reader(fp, delimiter=',', quotechar='"', escapechar='\\')
+        neg_count, pos_count, neut_count = 0, 0, 0
+        for row in reader:
+            sentiment = row[0]
+            if sentiment == 'neutral':
+                neut_count += 1
+            elif sentiment == 'positive':
+                pos_count += 1
+            elif sentiment == 'negative':
+                neg_count += 1
+        # end loop
+        return min(neg_count, pos_count, neut_count)
+
     # end
 
 # end class

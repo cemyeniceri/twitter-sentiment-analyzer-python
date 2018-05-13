@@ -19,33 +19,6 @@ class SVMClassifier:
 
     # end
 
-    # start getUniqueData
-    def getTweetsWithUniqueWords(self, tweets):
-        tweets_with_unique_words = []
-        for tweet in tweets:
-            word_set = []
-            words = tweet.split()
-            for word in words:
-                if word not in word_set and self.helper.is_ascii(word):
-                    word_set.append(word)
-            # end inner loop
-            tweet_str = " ".join(str(x) for x in word_set)
-            tweets_with_unique_words.append(tweet_str)
-            # end outer loop
-        return tweets_with_unique_words
-
-    # end
-
-    # start getProcessedTweets
-    def getProcessedTweetList(self, tweets):
-        processed_tweets = []
-        for tweet in tweets:
-            processed_tweets.append(self.helper.process_tweet(tweet))
-            # end loop
-        return processed_tweets
-
-    # end
-
     # start getNBTrainedClassifier
     def getSVMTrainedClassifer(self, training_data_file, classifier_dump_file):
         # read all tweets and labels
@@ -81,7 +54,7 @@ class SVMClassifier:
     # start getFilteredTrainingData
     def getFilteredTrainingData(self, training_data_file):
         fp = open(training_data_file, 'rb')
-        # min_count = self.getMinCount(training_data_file)
+        # min_count = self.helper.getMinCount(training_data_file)
         min_count = 100
         training_data_count = int(min_count * 0.75)
         neg_count, pos_count, neut_count = 0, 0, 0
@@ -121,22 +94,6 @@ class SVMClassifier:
 
     # end
 
-    # start getMinCount
-    def getMinCount(self, training_data_file):
-        fp = open(training_data_file, 'rb')
-        reader = csv.reader(fp, delimiter=',', quotechar='"', escapechar='\\')
-        neg_count, pos_count, neut_count = 0, 0, 0
-        for row in reader:
-            sentiment = row[0]
-            if sentiment == 'neutral':
-                neut_count += 1
-            elif sentiment == 'positive':
-                pos_count += 1
-            elif sentiment == 'negative':
-                neg_count += 1
-        # end loop
-        return min(neg_count, pos_count, neut_count)
-
     # end
 
     # start classify
@@ -151,8 +108,8 @@ class SVMClassifier:
             else:
                 classifier = self.getSVMTrainedClassifer(self.training_data_file, self.classifier_dump_file)
 
-        orig_tweets = self.getTweetsWithUniqueWords(tweets_fetched)
-        processed_tweets = self.getProcessedTweetList(orig_tweets)
+        orig_tweets = self.helper.getTweetsWithUniqueWords(tweets_fetched)
+        processed_tweets = self.helper.getProcessedTweetList(orig_tweets)
 
         test_feature_vector = self.helper.getSVMFeatureVector(processed_tweets)
         p_labels, p_accs, p_vals = svm_predict([0] * len(test_feature_vector), \
@@ -208,9 +165,9 @@ class SVMClassifier:
             total += 1
             count += 1
         # end loop
-        self.accuracy = (float(correct) / total) * 100
+        accuracy = (float(correct) / total) * 100
         print('Total = %d, Correct = %d, Wrong = %d, Accuracy = %.2f' % \
-              (total, correct, wrong, self.accuracy))
+              (total, correct, wrong, accuracy))
     # end
 
 # end class
