@@ -31,7 +31,7 @@ class ClassifierHelper:
     # start getStopWordList
     def getStopWordList(self, stop_word_list_file_name):
         # read the stopwords file and build a list
-        stop_words = ['AT_USER', 'URL']
+        stop_words = ['AT_USER', 'URL', 'rt', 'RT']
         fp = open(stop_word_list_file_name, 'r')
         line = fp.readline()
         while line:
@@ -65,21 +65,23 @@ class ClassifierHelper:
     # end
 
     def getSVMFeatureVectorAndLabels(self, tweets):
-        sortedFeatures = sorted(self.wordFeatures)
-        map = {}
+        sorted_features = sorted(self.featureList)
         feature_vector = []
         labels = []
         for t in tweets:
             label = 0
             map = {}
             # Initialize empty map
-            for w in sortedFeatures:
+            for w in sorted_features:
                 map[w] = 0
 
             tweet_words = t[0]
             tweet_opinion = t[1]
             # Fill the map
-            for word in tweet_words:
+            words = tweet_words.split()
+            for word in words:
+                if word in self.stopWords:
+                    continue
                 word = self.replaceTwoOrMore(word)
                 word = word.strip('\'"?,.')
                 if word in map:
@@ -87,11 +89,11 @@ class ClassifierHelper:
             # end for loop
             values = map.values()
             feature_vector.append(values)
-            if (tweet_opinion == 'positive'):
+            if tweet_opinion == 'positive':
                 label = 0
-            elif (tweet_opinion == 'negative'):
+            elif tweet_opinion == 'negative':
                 label = 1
-            elif (tweet_opinion == 'neutral'):
+            elif tweet_opinion == 'neutral':
                 label = 2
             labels.append(label)
         return {'feature_vector': feature_vector, 'labels': labels}
@@ -100,17 +102,17 @@ class ClassifierHelper:
 
     # start getSVMFeatureVector
     def getSVMFeatureVector(self, tweets):
-        sortedFeatures = sorted(self.wordFeatures)
-        map = {}
+        sorted_features = sorted(self.featureList)
         feature_vector = []
         for t in tweets:
-            label = 0
             map = {}
             # Initialize empty map
-            for w in sortedFeatures:
+            for w in sorted_features:
                 map[w] = 0
             # Fill the map
-            for word in t:
+            for word in t.split():
+                if word in self.stopWords:
+                    continue
                 if word in map:
                     map[word] = 1
             # end for loop

@@ -21,7 +21,7 @@ class NaiveBayesClassifier:
 
     # end
 
-    # start getUniqData
+    # start getUniqueData
     def getTweetsWithUniqueWords(self, tweets):
         tweets_with_unique_words = []
         for tweet in tweets:
