@@ -5,15 +5,14 @@ import naive_bayes_classifier, max_entropy_classifier, libsvm_classifier
 
 def app():
     keyword = 'apple'
-    method = 'maxentropy'
+    method = 'svm'
 
-    training_required = 0
-    classify_enabled = 0
+    training_required = 1
+    classify_enabled = 1
 
     print(method)
     print(keyword)
 
-    # training_data_file = 'data-set/training_neatfile.csv'
     training_data_file = 'data-set/Airline-Sentiment.csv'
 
     if classify_enabled:
